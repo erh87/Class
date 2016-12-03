@@ -1,0 +1,282 @@
+begin model
+
+	begin parameters
+	
+	ligbind 1e-4
+	myd88bind 1e-4
+	irakbind 1e-4
+	irakact 1e-1
+	irakunbind 1e-4
+	traddbind 1e-4
+	ripbind 1e-4
+	trafbind 1e-4
+	ripact 1e-1
+	ripunbind 1e-4
+	eoneact 1e-1
+	eoneunbind 1e-4
+	etwo 1e-4
+	ubtrans 1e-1
+	mono 1e-4 #slow
+	poly 0.1 #fast
+	dub 1e-4
+	tttbind 1e-4
+	ikkact 0.1
+	ikbinact 1e-1
+	ikkdeg 1e-7 #very slow. realistic?
+	pellact 0.1
+	nfkbact 1e-4
+	nfkbunbind 1e-1
+	transc 1e-7
+	a20deg 1e-7
+	trafin 1e-4
+	nfkbinact 0.1
+	
+	end parameters
+	
+	begin molecule types
+	
+	## TNF species
+	TNF(l) 
+	TNFR(r,scaf,tradd)
+	TRADD(r,rip1) 
+	TRAF2(rip1,ubd) 
+	RIP1(tradd,act~0~1,traf,ubd)
+	UBCH5(ubd)
+	## IL1 species
+	IL1(l)
+	IL1R(r,scaf,irak)
+	Myd88(tir)
+	IRAK14(ubsite,phos~U~P)
+	TRAF6(a,act~0~1)
+	UBE2N(ub)
+	Pell(scaf,act~0~1,ub)
+	## Shared species
+	Ub(linker,K63,K11,adap,act~0~1)
+	TTT(ubd)
+	Ube1Uba1(ubd)
+	A20(act~0~1)
+	IKK(scaf,phos~0~1)
+	IkB(phos~0~1)
+	NFkB(transc~0~1,act~0~1)
+	
+	end molecule types
+	
+	begin seed species
+	
+	#Concentration in fraction
+	
+	IL1(l) 2.5e4
+	#TNF(l) 25000
+	
+	#Assume ligands is in excess
+	#TNFR(r,scaf,tradd) 2500
+	#TRADD(r,rip1) 2500
+	#TRAF2(rip1,ubd) 2500
+	#RIP1(tradd,act~0,traf,ubd) 2500
+	#UBCH5(ubd) 2500
+	#IL1
+	IL1R(r,scaf,irak) 2500
+	Myd88(tir) 2500
+	IRAK14(ubsite,phos~U) 2500
+	TRAF6(a,act~0) 2500
+	UBE2N(ub) 1000
+	Pell(scaf,act~0,ub) 2500
+	#Shared
+	Ube1Uba1(ubd) 1000
+	Ub(linker,K63,K11,adap,act~0) 25000
+	TTT(ubd) 2000
+	A20(act~0) 2500
+	IKK(scaf,phos~0) 1000
+	NFkB(transc~0,act~0) 2500
+	IkB(phos~0) 2500
+	
+	end seed species
+	
+	begin observables
+	
+	#Molecules boundligand IL1(l!1).IL1R(r!1)
+	#Molecules UBact Ub(act~1)
+	Molecules ACTnfkb NFkB(transc~1,act~0)
+	Molecules IKKact IKK(phos~1)
+	Molecules actIRAK IRAK14(phos~P)
+	Molecules TRAF6act IRAK14(phos~P!1).TRAF6(a!1)
+	#Molecules MydRec IL1(l!1).IL1R(r!1,scaf!2).Myd88(tir!2)
+	Molecules TTTbound TTT(ubd!2).IRAK14(ubsite!3,phos~P!1)
+	#Molecules Diubiq Ub(linker,K63!1,M1,adap,act~1).Ub(linker!1,K63,M1,adap,act~1)
+	Molecules E2 UBE2N(ub!1).Ub(K63,K11,adap!1,act~1)
+	Molecules Pellact Pell(scaf,act~1)
+	Molecules A20act A20(act~1)
+	#Molecules Rip1 RIP1(act~1)
+	#Molecules E2 UBCH5(ubd!1).Ub(K63,K11,adap!1,act~1)
+	Molecules E1 Ub(K63,K11,adap,act~0!1).Ube1Uba1(ubd!1)
+	#Molecules E3 RIP1(tradd,act~1,traf!1,ubd!?).TRAF2(rip1!1,ubd!2).Ub(K63,K11,adap!2,act~1)
+	
+	 
+	end observables
+	
+	begin functions
+
+	end functions
+	
+	begin reaction rules
+	
+	###################################
+	# TNF RECEPTOR COMPLEX FORMATION
+	###################################
+	
+	#Ligand-Receptor binding
+	TNF(l) + TNFR(r) -> TNF(l!1).TNFR(r!1) ligbind
+	
+	#Receptor complex assembly
+	
+	TNF(l!1).TNFR(r!1,tradd) + TRADD(r) ->  TNF(l!1).TNFR(r!1,tradd!2).TRADD(r!2) traddbind
+	
+	TNF(l!1).TNFR(r!1,tradd!2).TRADD(r!2) + RIP1(tradd) -> TNF(l!1).TNFR(r!1,tradd!2).TRADD(r!2,rip1!3).RIP1(tradd!3) ripbind
+	
+	TNF(l!1).TNFR(r!1,tradd!2).TRADD(r!2,rip1!3).RIP1(tradd!3,traf) + TRAF2(rip1) -> TNF(l!1).TNFR(r!1,tradd!2).TRADD(r!2,rip1!3).RIP1(tradd!3,traf!4).TRAF2(rip1!4) trafbind
+	
+	#Activation of RIP1
+	
+	TNF(l!1).TNFR(r!1,tradd!2).TRADD(r!2,rip1!3).RIP1(tradd!3,act~0,traf!4).TRAF2(rip1!4) -> TNF(l!1).TNFR(r!1,tradd!2).TRADD(r!2,rip1!3).RIP1(tradd!3,act~1,traf!4).TRAF2(rip1!4) ripact
+	
+	#Dispersement of RIP1/TRAF2 complex
+	
+	TNF(l!1).TNFR(r!1,tradd!2).TRADD(r!2,rip1!3).RIP1(tradd!3,act~1,traf!4).TRAF2(rip1!4) -> TNF(l!1).TNFR(r!1,tradd!2).TRADD(r!2,rip1) + RIP1(tradd,act~1,traf!1).TRAF2(rip1!1) ripunbind
+	
+	###################################
+	# IL1 RECEPTOR COMPLEX FORMATION
+	###################################
+	
+	#Ligand-Receptor binding
+	
+	IL1(l) + IL1R(r,scaf,irak) -> IL1(l!1).IL1R(r!1,scaf,irak) ligbind
+	
+	#Receptor complex assembly
+	
+	IL1(l!1).IL1R(r!1,scaf) + Myd88(tir) ->  IL1(l!1).IL1R(r!1,scaf!2).Myd88(tir!2) myd88bind
+	
+	IL1(l!1).IL1R(r!1,scaf!2,irak).Myd88(tir!2) + IRAK14(phos~U) -> IL1(l!1).IL1R(r!1,scaf!2,irak!3).Myd88(tir!2).IRAK14(phos~U!3) irakbind
+	
+	#Activation of IRAKs
+	
+	IL1(l!1).IL1R(r!1,scaf!2,irak!3).Myd88(tir!2).IRAK14(phos~U!3) -> IL1(l!1).IL1R(r!1,scaf!2,irak!3).Myd88(tir!2).IRAK14(phos~P!3) irakact
+	
+	#Dispersement of activated IRAKs
+	
+	IL1(l!1).IL1R(r!1,scaf!2,irak!3).Myd88(tir!2).IRAK14(phos~P!3) -> IL1(l!1).IL1R(r!1,scaf!2,irak).Myd88(tir!2)+ IRAK14(phos~P) irakunbind
+	
+	#Recruitment of TRAF6
+	
+	IRAK14(ubsite,phos~P) + TRAF6(a) -> IRAK14(ubsite,phos~P!1).TRAF6(a!1) trafbind
+	
+	##################################################
+	# 
+	#	BUILDING UBIQUITIN CHAINS
+	# 
+	##################################################
+	
+	#E1 
+	
+	Ub(K63,K11,adap,act~0) + Ube1Uba1(ubd) -> Ub(K63,K11,adap,act~0!1).Ube1Uba1(ubd!1) eoneact
+	Ub(K63,K11,adap,act~0!1).Ube1Uba1(ubd!1) -> Ub(K63,K11,adap,act~1) + Ube1Uba1(ubd) eoneunbind
+	
+	###TNF
+
+	#E2
+	
+	UBCH5(ubd) + Ub(K63,K11,adap,act~1) -> UBCH5(ubd!1).Ub(K63,K11,adap!1,act~1) etwo
+	 
+	###IL1 
+	
+	#E2 enzyme UBE2N (aka Ubc13) and E2 enzyme UBE2V1 form heterodimers
+	
+	UBE2N(ub) + Ub(K63,K11,adap,act~1) -> UBE2N(ub!1).Ub(K63,K11,adap!1,act~1) etwo
+	
+	
+	#######################################
+	# K63 CHAIN FORMATION
+	#######################################
+	
+	### Pellino is activated upstream of Tab/Tak complex and downstream of TRAF6 ... 
+	# Places Pellino activation here (by IRAK1/4). Partial activation is not modeled.
+	
+	IRAK14(phos~P!1).TRAF6(a!1) + Pell(scaf,act~0) -> IRAK14(phos~P!1).TRAF6(a!1) + Pell(scaf,act~1) pellact
+	
+	#E3 - Ub transfer, Mono/polyubiquitination
+	
+	UBE2N(ub!1).Ub(K63,K11,adap!1,act~1) + Pell(scaf,act~1,ub) -> Pell(scaf,act~1,ub!1).Ub(K63,K11,adap!1,act~1) + UBE2N(ub) ubtrans
+	
+	IRAK14(phos~P!1).TRAF6(a!1) + Pell(scaf,act~1,ub!1).Ub(K63,K11,adap!1,act~1) -> IRAK14(ubsite!2,phos~P!1).TRAF6(a!1).Ub(linker!2,K63,K11,adap,act~1) + Pell(scaf,act~1,ub) mono 
+	
+	IRAK14(ubsite!2,phos~P!1).TRAF6(a!1).Ub(linker!2,K63,K11,adap,act~1) + Pell(scaf,act~1,ub!1).Ub(K63,K11,adap!1,act~1) -> IRAK14(ubsite!2,phos~P!1).TRAF6(a!1).Ub(linker!2,K63!3,K11,adap,act~1).Ub(linker!3,K63,K11,adap,act~1) + Pell(scaf,act~1,ub) poly 
+
+	############################################
+	#K11 CHAIN FORMATION 
+	############################################
+	
+	UBCH5(ubd!1).Ub(K63,K11,adap!1,act~1) + RIP1(tradd,act~1,traf!1,ubd!?).TRAF2(rip1!1,ubd) -> RIP1(tradd,act~1,traf!1,ubd!?).TRAF2(rip1!1,ubd!2).Ub(K63,K11,adap!2,act~1) + UBCH5(ubd) ubtrans
+	
+	RIP1(tradd,act~1,traf!1,ubd).TRAF2(rip1!1,ubd!2).Ub(K63,K11,adap!2,act~1) -> RIP1(tradd,act~1,traf!1,ubd!2).TRAF2(rip1!1,ubd).Ub(linker,K63,K11!2,adap,act~1) mono
+	
+	RIP1(tradd,act~1,traf!1,ubd!2).TRAF2(rip1!1,ubd).Ub(linker,K63,K11!2,adap,act~1) + Ub(linker,K63,K11,adap,act~1) -> RIP1(tradd,act~1,traf!1,ubd!2).TRAF2(rip1!1,ubd).Ub(linker!3,K63,K11!2,adap,act~1).Ub(linker,K63,K11!3,adap,act~1) poly
+	
+	
+	#############################################
+	# IKK ACTIVATION
+	#############################################
+	
+	#IL1
+	#TAB1-TAK1-TAK2 preassembled complex binds polyUb. How many
+	# ubiquitins do there need to be for complex to bind? Est:2
+	
+	TTT(ubd) + IRAK14(ubsite!2,phos~P!1).TRAF6(a!1).Ub(linker!2,K63!3,K11,adap,act~1).Ub(linker!3,K63,K11,adap,act~1)-> TTT(ubd!2).IRAK14(ubsite!3,phos~P!1).TRAF6(a!1).Ub(linker!3,K63!4,K11,adap,act~1).Ub(linker!4,K63,K11,adap!2,act~1) tttbind
+	
+	#IKK activation - TAK-1 mediated, for current purposes we'll just say it's the complex
+	#Binding and activation = 1 step
+	
+	IKK(scaf,phos~0) + TTT(ubd!2).IRAK14(ubsite!3,phos~P!1).TRAF6(a!1).Ub(linker!3,K63!4,K11,adap,act~1).Ub(linker!4,K63,K11,adap!2,act~1) -> TTT(ubd!2).IRAK14(ubsite!3,phos~P!1).TRAF6(a!1).Ub(linker!3,K63!4,K11,adap,act~1).Ub(linker!4,K63,K11,adap!2,act~1)+ IKK(scaf,phos~1) ikkact
+	
+	#TNF
+	RIP1(tradd,act~1,traf!1,ubd!2).TRAF2(rip1!1,ubd).Ub(linker!3,K63,K11!2,adap,act~1).Ub(linker,K63,K11!3,adap,act~1) + IKK(scaf,phos~0) -> RIP1(tradd,act~1,traf!1,ubd!2).TRAF2(rip1!1,ubd).Ub(linker!3,K63,K11!2,adap,act~1).Ub(linker,K63,K11!3,adap,act~1) + IKK(scaf,phos~1) ikkact
+	
+	 
+	#IkB inactivation
+	
+	IKK(phos~1) + IkB(phos~0!1).NFkB(transc~0!1) -> IKK(phos~1) + IkB(phos~1!1).NFkB(transc~0!1) ikbinact
+	
+	#NfKB activation
+	
+	NFkB(transc~0,act~0)+ IkB(phos~0) -> IkB(phos~0!1).NFkB(transc~0!1,act~0) nfkbact
+	
+	IkB(phos~1!1).NFkB(transc~0!1) ->  IkB(phos~1)+ NFkB(transc~1) nfkbunbind
+	
+	#IKK degradation? Meant to model inactivation of IKK
+
+	IKK(phos~1) -> IKK(phos~0) ikkdeg
+	
+	# Transcription
+	
+	NFkB(transc~1,act~0) + A20(act~0) -> NFkB(transc~1,act~1) +  A20(act~1) transc
+	
+	#NFkB inactivation
+	
+	NFkB(transc~1,act~1) ->  NFkB(transc~0,act~0) nfkbinact
+	
+	# mRNA deg
+	
+	A20(act~1) -> 0 a20deg 
+	
+	#FEEDBACK LOOPS
+	
+	A20(act~1) + TRAF6(act~1) -> A20(act~0) + TRAF6(act~0) trafin
+	
+	A20(act~1) + Ub(linker!1,K63).Ub(linker,K63!1) -> A20(act~0) + Ub(linker,K63) + Ub(linker,K63) dub
+	
+	end reaction rules
+
+end model
+
+generate_network({max_agg=>8});
+
+simulate_ssa({n_steps=>100,t_end=>20000})
+
